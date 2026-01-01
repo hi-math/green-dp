@@ -31,6 +31,7 @@ export default function HomePage() {
   }, []);
 
   function openMetric(key: MetricKey) {
+    if (!schoolId) return;
     setActiveMetric(key);
     setModalOpen(true);
   }
@@ -43,14 +44,32 @@ export default function HomePage() {
     <AppShell>
       <SchoolPicker value={schoolId} onChange={onPickSchool} />
 
-      <div style={{ height: 12 }} />
-      <DashboardTopPanel signalSumPercent={domainSum}>
-        <EnergyGrid onSelect={openMetric} />
-      </DashboardTopPanel>
+      {schoolId ? (
+        <>
+          <div style={{ height: 12 }} />
+          <DashboardTopPanel signalSumPercent={domainSum}>
+            <EnergyGrid onSelect={openMetric} />
+          </DashboardTopPanel>
 
-      <DomainCardsRow schoolId={schoolId} onScoresChange={handleScores} />
+          <DomainCardsRow schoolId={schoolId} onScoresChange={handleScores} />
 
-      <MetricModal open={modalOpen} onClose={() => setModalOpen(false)} metric={activeMetric} schoolId={schoolId} />
+          <MetricModal open={modalOpen} onClose={() => setModalOpen(false)} metric={activeMetric} schoolId={schoolId} />
+        </>
+      ) : (
+        <div
+          style={{
+            marginTop: 12,
+            border: "1px dashed #CBD5E1",
+            background: "#F1F5F9",
+            borderRadius: 18,
+            padding: 18,
+            color: "#0F172A",
+            fontWeight: 900,
+          }}
+        >
+          학교를 선택하세요
+        </div>
+      )}
     </AppShell>
   );
 }

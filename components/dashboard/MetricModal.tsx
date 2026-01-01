@@ -5,8 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import type { MetricKey } from "@/components/dashboard/types";
 import HourlyUsageChart from "@/components/dashboard/HourlyUsageChart";
 import MonthlyElectricComboChart from "@/components/dashboard/MonthlyElectricComboChart";
-import { getFirebaseDb } from "@/lib/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const TITLE: Record<MetricKey, string> = {
   electric: "전기 사용량",
@@ -100,26 +98,20 @@ export default function MetricModal({
     let alive = true;
     (async () => {
       try {
-        const db = getFirebaseDb();
-        const ref = doc(db, "schools", schoolId);
-        const snap = await getDoc(ref);
+        const r = await fetch(`/api/schools/${encodeURIComponent(schoolId)}`, { cache: "no-store" });
+        if (!r.ok) throw new Error(`API ${r.status}`);
+        const j = (await r.json()) as any;
         if (!alive) return;
 
-        const fromDb = snap.exists() ? (snap.data() as any)?.district : null;
-        if (typeof fromDb === "string" && fromDb.trim()) {
-          setDistrict(fromDb.trim());
+        const fromApi = (j?.data ?? {})?.district ?? null;
+        if (typeof fromApi === "string" && fromApi.trim()) {
+          setDistrict(fromApi.trim());
           return;
         }
 
-        // If missing, auto-fill for known schools (요청 매핑)
+        // If missing, use known mapping (display-only)
         const mapped = DISTRICT_BY_SCHOOL[schoolId];
-        if (mapped) {
-          setDistrict(mapped);
-          // best-effort write-back (merge) so DB has the value
-          await setDoc(ref, { district: mapped }, { merge: true });
-        } else {
-          setDistrict(null);
-        }
+        setDistrict(mapped ?? null);
       } catch {
         // ignore (read/write may be restricted)
       }

@@ -1,6 +1,7 @@
 "use client";
 
 import CompareBarChart from "./CompareBarChart"; // ✅ 같은 폴더면 이게 제일 안전함
+import styles from "./EnergyGrid.module.css";
 
 export type MetricKey = "electric" | "water" | "gas" | "solar";
 
@@ -14,7 +15,6 @@ const METRICS: { key: MetricKey; title: string }[] = [
 const MONTHS = ["10", "11", "12"];
 
 const CARD_H = 220;
-const GAP = 12;
 
 function clamp(n: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, n));
@@ -167,16 +167,7 @@ export default function EnergyGrid({
   onSelect?: (metric: MetricKey) => void;
 }) {
   return (
-    <div
-      style={{
-        height: CARD_H * 2 + GAP, // ✅ 이 높이가 왼쪽 카드와 맞아야 함
-        display: "grid",
-        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-        gridAutoRows: `${CARD_H}px`,
-        gap: GAP,
-        minWidth: 0,
-      }}
-    >
+    <div className={styles.grid}>
       {METRICS.map((m) => (
         <MetricCard key={m.key} metric={m.key} title={m.title} onClick={() => onSelect?.(m.key)} />
       ))}

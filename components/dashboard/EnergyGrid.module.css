@@ -1,0 +1,25 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Desktop: align with CarbonCard height (220*2 + gap) */
+@media (min-width: 901px) {
+  .grid {
+    height: 452px; /* 220*2 + 12 */
+    grid-auto-rows: 220px;
+  }
+}
+
+/* Mobile: stack 4 cards vertically */
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+    height: auto;
+    grid-auto-rows: 220px;
+  }
+}
+
+

@@ -24,6 +24,23 @@ export default function SchoolPicker({
       setLoading(true);
       setError(null);
       try {
+        // 1) Prefer server API (works even when Firestore Rules block public reads)
+        const r = await fetch("/api/schools", { cache: "no-store" });
+        if (r.ok) {
+          const j = (await r.json()) as any;
+          const apiItems = Array.isArray(j?.items) ? (j.items as Item[]) : null;
+          if (apiItems) {
+            const out = apiItems
+              .filter((x) => x && typeof x.id === "string" && typeof x.label === "string")
+              .map((x) => ({ id: x.id, label: x.label }));
+            out.sort((a, b) => a.label.localeCompare(b.label, "ko"));
+            if (!alive) return;
+            setItems(out);
+            return;
+          }
+        }
+
+        // 2) Fallback: direct client Firestore (requires Rules to allow read)
         const db = getFirebaseDb();
         const snap = await getDocs(collection(db, "schools"));
         const out: Item[] = [];
@@ -38,7 +55,10 @@ export default function SchoolPicker({
       } catch (e: any) {
         if (!alive) return;
         setItems([]);
-        setError("학교 목록을 불러오지 못했습니다. (Firestore 규칙/권한을 확인하세요)");
+        const msg = typeof e?.message === "string" ? e.message : "unknown error";
+        setError(
+          `학교 목록을 불러오지 못했습니다. (Firestore 규칙/권한 또는 서버 API 설정을 확인하세요)\n- ${msg}`,
+        );
       } finally {
         if (alive) setLoading(false);
       }

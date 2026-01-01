@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
 import styles from "./DomainCardsRow.module.css";
-import { getFirebaseDb } from "@/lib/firebase";
 
 const GAP = 12;
 const CARD_H = 220;
@@ -366,13 +364,14 @@ export default function DomainCardsRow({
     setCultureLoading(true);
     setBehaviorLoading(true);
     setEnvLoading(true);
-    const db = getFirebaseDb();
-    const ref = doc(db, "schools", schoolId);
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch(`/api/schools/${encodeURIComponent(schoolId)}`, { cache: "no-store" });
+        if (!r.ok) throw new Error(`API ${r.status}`);
+        const j = (await r.json()) as any;
+        const data = (j?.data ?? {}) as any;
 
-    const unsub = onSnapshot(
-      ref,
-      (snap) => {
-        const data = snap.data() as any;
         const cChecks = (data?.bce?.culture_checks ?? {}) as Partial<Record<CultureKey, boolean>>;
         const bChecks = (data?.bce?.behavior_checks ?? {}) as Partial<Record<BehaviorKey, boolean>>;
         const eChecksRaw = (data?.bce?.environment_checks ?? {}) as any;
@@ -393,7 +392,6 @@ export default function DomainCardsRow({
         const coolingSet = typeof data?.basic?.cooling?.min === "number" ? data.basic.cooling.min : null;
         const heatingSet = typeof data?.basic?.heating?.min === "number" ? data.basic.heating.min : null;
         const smartStandby = !!data?.basic?.checklist?.smartStandby;
-        const hvacEfficiencyUpgrade = !!data?.basic?.checklist?.hvacEfficiencyUpgrade; // legacy (현재 env 점수에는 사용하지 않음)
         const board = !!data?.basic?.checklist?.board;
 
         const greywaterFacility = !!eChecksRaw.greywater_facility;
@@ -405,11 +403,13 @@ export default function DomainCardsRow({
         // ✅ v2 environment checks (신규 키 / 구버전 호환)
         const ecoCoolRoof = !!eChecksRaw.eco_cool_roof;
         const windowInsulationFilm = !!eChecksRaw.window_insulation_film;
-        const forestGardenManage = !!eChecksRaw.forest_garden_manage || !!eChecksRaw.school_forest_manage || !!eChecksRaw.school_garden_operate;
+        const forestGardenManage =
+          !!eChecksRaw.forest_garden_manage || !!eChecksRaw.school_forest_manage || !!eChecksRaw.school_garden_operate;
         const recyclingStationEduProgram = !!eChecksRaw.recycling_station_edu_program || facilityExperienceEdu;
         const solarFacilityEduProgram = !!eChecksRaw.solar_facility_edu_program;
         const recyclingPromoEduProgram = !!eChecksRaw.recycling_promo_edu_program;
 
+        if (!alive) return;
         setCultureChecks(cChecks);
         setBehaviorChecks(bChecks);
         setEnvChecks({
@@ -439,18 +439,12 @@ export default function DomainCardsRow({
           heatingSet,
           smartStandby,
         });
-        setCultureLoading(false);
-        setBehaviorLoading(false);
-        setEnvLoading(false);
-      },
-      (err) => {
-        console.error("[DomainCardsRow] culture_checks subscribe failed:", err);
+      } catch (err) {
+        console.error("[DomainCardsRow] load failed:", err);
+        if (!alive) return;
         setCultureChecks(null);
-        setCultureLoading(false);
         setBehaviorChecks(null);
-        setBehaviorLoading(false);
         setEnvChecks(null);
-        setEnvLoading(false);
         setBehaviorMetrics({
           totalPeople: null,
           electricityCost: null,
@@ -463,10 +457,17 @@ export default function DomainCardsRow({
           heatingSet: null,
           smartStandby: false,
         });
-      },
-    );
+      } finally {
+        if (!alive) return;
+        setCultureLoading(false);
+        setBehaviorLoading(false);
+        setEnvLoading(false);
+      }
+    })();
 
-    return () => unsub();
+    return () => {
+      alive = false;
+    };
   }, [schoolId]);
 
   const behaviorCombinedChecks = useMemo(() => {
@@ -583,15 +584,7 @@ export default function DomainCardsRow({
   }, [behaviorValue, cultureValue, envValue, onScoresChange]);
 
   return (
-    <div
-      style={{
-        marginTop: 12,
-        display: "grid",
-        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-        gap: GAP,
-        width: "100%",
-      }}
-    >
+    <div className={styles.row} style={{ gap: GAP }}>
       <DomainCard
                 title="행동영역"
                 value={behaviorValue}

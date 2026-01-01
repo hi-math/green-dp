@@ -1,0 +1,16 @@
+.root {
+  display: grid;
+  grid-template-columns: minmax(360px, 35%) 1fr;
+  gap: 12px;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .root {
+    grid-template-columns: 1fr;
+  }
+}
+
+
