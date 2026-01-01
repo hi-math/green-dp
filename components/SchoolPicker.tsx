@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
-import { getFirebaseDb } from "@/lib/firebase";
 
 type Item = { id: string; label: string };
 
@@ -24,31 +22,17 @@ export default function SchoolPicker({
       setLoading(true);
       setError(null);
       try {
-        // 1) Prefer server API (works even when Firestore Rules block public reads)
+        // Prefer server API (so we don't depend on client Firebase config / Firestore Rules)
         const r = await fetch("/api/schools", { cache: "no-store" });
-        if (r.ok) {
-          const j = (await r.json()) as any;
-          const apiItems = Array.isArray(j?.items) ? (j.items as Item[]) : null;
-          if (apiItems) {
-            const out = apiItems
-              .filter((x) => x && typeof x.id === "string" && typeof x.label === "string")
-              .map((x) => ({ id: x.id, label: x.label }));
-            out.sort((a, b) => a.label.localeCompare(b.label, "ko"));
-            if (!alive) return;
-            setItems(out);
-            return;
-          }
+        const j = (await r.json()) as any;
+        if (!r.ok || j?.ok !== true) {
+          throw new Error(typeof j?.error === "string" ? j.error : `API ${r.status}`);
         }
 
-        // 2) Fallback: direct client Firestore (requires Rules to allow read)
-        const db = getFirebaseDb();
-        const snap = await getDocs(collection(db, "schools"));
-        const out: Item[] = [];
-        snap.forEach((d) => {
-          const data = d.data() as any;
-          const label = typeof data?.name === "string" && data.name.trim() ? data.name.trim() : d.id;
-          out.push({ id: d.id, label });
-        });
+        const apiItems = Array.isArray(j?.items) ? (j.items as Item[]) : [];
+        const out = apiItems
+          .filter((x) => x && typeof x.id === "string" && typeof x.label === "string")
+          .map((x) => ({ id: x.id, label: x.label }));
         out.sort((a, b) => a.label.localeCompare(b.label, "ko"));
         if (!alive) return;
         setItems(out);
@@ -56,9 +40,7 @@ export default function SchoolPicker({
         if (!alive) return;
         setItems([]);
         const msg = typeof e?.message === "string" ? e.message : "unknown error";
-        setError(
-          `학교 목록을 불러오지 못했습니다. (Firestore 규칙/권한 또는 서버 API 설정을 확인하세요)\n- ${msg}`,
-        );
+        setError(`학교 목록을 불러오지 못했습니다.\n- ${msg}`);
       } finally {
         if (alive) setLoading(false);
       }

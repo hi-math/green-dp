@@ -25,6 +25,8 @@ export default function HomePage() {
 
   const onPickSchool = useCallback((id: string) => {
     setSchoolId(id);
+    setDomainSum(null);
+    setModalOpen(false);
     try {
       localStorage.setItem("selectedSchoolId", id);
     } catch {}
@@ -45,7 +47,7 @@ export default function HomePage() {
       <SchoolPicker value={schoolId} onChange={onPickSchool} />
 
       {schoolId ? (
-        <>
+        <div key={schoolId}>
           <div style={{ height: 12 }} />
           <DashboardTopPanel signalSumPercent={domainSum}>
             <EnergyGrid onSelect={openMetric} />
@@ -53,8 +55,13 @@ export default function HomePage() {
 
           <DomainCardsRow schoolId={schoolId} onScoresChange={handleScores} />
 
-          <MetricModal open={modalOpen} onClose={() => setModalOpen(false)} metric={activeMetric} schoolId={schoolId} />
-        </>
+          <MetricModal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            metric={activeMetric}
+            schoolId={schoolId}
+          />
+        </div>
       ) : (
         <div
           style={{

@@ -99,6 +99,13 @@ function DomainCard({
   value: number;
   tasks: string[];
 }) {
+  const safeTasks = useMemo(() => {
+    // 클릭/리렌더 시 동일 항목이 중복으로 "쌓여 보이는" 현상을 방지
+    // (데이터 중복 또는 key 충돌에 대해 방어적으로 처리)
+    const uniq = Array.from(new Set((tasks ?? []).map((t) => String(t ?? "").trim()).filter(Boolean)));
+    return uniq.length > 0 ? uniq : ["—"];
+  }, [tasks]);
+
   return (
     <CardShell title={title}>
       <div className={styles.domainCardContent}>
@@ -125,8 +132,8 @@ function DomainCard({
           <div style={{ fontSize: 12, fontWeight: 900, color: "#334155" }}>실천 과제</div>
 
           <div style={{ marginTop: 8, display: "grid", gap: 8 }}>
-            {tasks.map((t) => (
-              <div key={t} style={{ display: "flex", gap: 8, alignItems: "flex-start", minWidth: 0 }}>
+            {safeTasks.map((t, i) => (
+              <div key={`${t}-${i}`} style={{ display: "flex", gap: 8, alignItems: "flex-start", minWidth: 0 }}>
                 <span
                   style={{
                     marginTop: 6,
@@ -360,6 +367,23 @@ export default function DomainCardsRow({
       });
       return;
     }
+
+    // schoolId가 바뀌면 이전 학교 데이터가 잠깐이라도 남아 보이지 않도록 즉시 초기화
+    setCultureChecks(null);
+    setBehaviorChecks(null);
+    setEnvChecks(null);
+    setBehaviorMetrics({
+      totalPeople: null,
+      electricityCost: null,
+      gasCost: null,
+      waterCost: null,
+      paperCost: null,
+      disposableCost: null,
+      wasteDisposalCost: null,
+      coolingSet: null,
+      heatingSet: null,
+      smartStandby: false,
+    });
 
     setCultureLoading(true);
     setBehaviorLoading(true);
